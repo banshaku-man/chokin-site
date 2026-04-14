@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>100万円貯金シミュレーター</title>
-  <meta name="description" content="手取りと支出を入力すると、100万円まで何年何ヶ月かかるか、支出のバランスが平均より高いかを確認できる無料ツールです。">
+  <meta name="description" content="手取りと支出を入力すると、100万円まで何年何ヶ月かかるか、支出バランスの改善ポイントがわかる無料ツールです。">
 
   <!-- AdSenseは審査通過後にここへ貼る -->
 
@@ -19,13 +19,17 @@
     }
 
     .container {
-      max-width: 860px;
+      max-width: 920px;
       margin: 0 auto;
     }
 
     h1 {
       font-size: 28px;
       margin-bottom: 8px;
+    }
+
+    h2 {
+      margin-top: 0;
     }
 
     .sub {
@@ -157,13 +161,26 @@
       color: #2563eb;
       text-decoration: none;
     }
+
+    .small {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .highlight {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 12px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>100万円貯金シミュレーター</h1>
     <p class="sub">
-      手取りと毎月の支出を入れると、100万円まで何年何ヶ月かかるかと、支出バランスの改善ポイントがわかります。
+      手取りと毎月の支出を入れると、100万円まで何年何ヶ月かかるか、支出バランスの改善ポイントがわかります。
     </p>
 
     <div class="card">
@@ -218,8 +235,8 @@
       <h2>結果</h2>
       <div class="result-box">
         <p class="big" id="monthlyLeft">毎月の残り：-</p>
+        <p id="yearlyLeft">年間で残せる金額：-</p>
         <p id="monthsToGoal">100万円まで：-</p>
-        <p id="dailyBudget">1日使える目安：-</p>
         <p id="summaryMessage">-</p>
       </div>
     </div>
@@ -231,6 +248,7 @@
           <tr>
             <th>項目</th>
             <th>金額</th>
+            <th>1日あたり</th>
             <th>手取り比率</th>
             <th>判定</th>
             <th>コメント</th>
@@ -238,7 +256,7 @@
         </thead>
         <tbody id="analysisTable">
           <tr>
-            <td colspan="5">まだ診断していません</td>
+            <td colspan="6">まだ診断していません</td>
           </tr>
         </tbody>
       </table>
@@ -246,6 +264,7 @@
 
     <div class="card">
       <h2>改善提案</h2>
+      <div id="improvementSummary" class="highlight" style="display:none;"></div>
       <div id="suggestions">
         <p>診断後に、見直しポイントがここに表示されます。</p>
       </div>
@@ -300,16 +319,16 @@
       return (num * 100).toFixed(1) + "%";
     }
 
+    function perDay(num) {
+      return Math.round(num / 30);
+    }
+
     function formatMonthsToJapanese(months) {
       const years = Math.floor(months / 12);
       const remainMonths = months % 12;
 
-      if (years === 0) {
-        return remainMonths + "ヶ月";
-      }
-      if (remainMonths === 0) {
-        return years + "年";
-      }
+      if (years === 0) return remainMonths + "ヶ月";
+      if (remainMonths === 0) return years + "年";
       return years + "年" + remainMonths + "ヶ月";
     }
 
@@ -333,6 +352,11 @@
       return val === "" ? 0 : Number(val);
     }
 
+    function getMonthsToGoal(goal, monthlyLeft) {
+      if (monthlyLeft <= 0) return null;
+      return Math.ceil(goal / monthlyLeft);
+    }
+
     function getAffiliateBox(type) {
       if (type === "phone") {
         return `
@@ -340,6 +364,16 @@
             <strong>通信費が高めです</strong><br>
             格安SIMに変えるだけで、月3,000〜5,000円下がることもあります。<br>
             <a href="#">👉 格安SIMをチェック</a>
+          </div>
+        `;
+      }
+
+      if (type === "food") {
+        return `
+          <div class="ad-box">
+            <strong>食費が高めです</strong><br>
+            外食や買い方を見直すだけで、月5,000円以上変わることもあります。<br>
+            <a href="#">👉 食費見直しサービスをチェック</a>
           </div>
         `;
       }
@@ -368,7 +402,7 @@
         return `
           <div class="ad-box">
             <strong>投資が0円です</strong><br>
-            まずは貯金優先でOKですが、余裕が出てきたら少額つみたてを考えるのもアリです。<br>
+            まずは貯金優先でOKですが、余裕が出てきたら少額つみたても選択肢です。<br>
             <a href="#">👉 つみたて投資をチェック</a>
           </div>
         `;
@@ -417,47 +451,49 @@
 
       const totalExpenses = rent + food + phone + utilities + social + insurance + investment + other;
       const monthlyLeft = income - totalExpenses;
+      const yearlyLeft = monthlyLeft * 12;
+      const goal = 1000000;
 
       const monthlyLeftEl = document.getElementById("monthlyLeft");
+      const yearlyLeftEl = document.getElementById("yearlyLeft");
       const monthsToGoalEl = document.getElementById("monthsToGoal");
-      const dailyBudgetEl = document.getElementById("dailyBudget");
       const summaryMessageEl = document.getElementById("summaryMessage");
       const analysisTable = document.getElementById("analysisTable");
       const suggestions = document.getElementById("suggestions");
+      const improvementSummary = document.getElementById("improvementSummary");
 
       monthlyLeftEl.textContent = "毎月の残り： " + yen(monthlyLeft);
+      yearlyLeftEl.textContent = "年間で残せる金額： " + yen(yearlyLeft);
+
+      const currentMonths = getMonthsToGoal(goal, monthlyLeft);
 
       if (monthlyLeft <= 0) {
         monthsToGoalEl.textContent = "100万円まで：このままだと貯金できません";
-        dailyBudgetEl.textContent = "1日使える目安：支出を見直す必要があります";
         summaryMessageEl.innerHTML = `<span class="danger">支出が手取りを超えているか、ほぼ同じです。まずは固定費の見直しが優先です。</span>`;
       } else {
-        const months = Math.ceil(1000000 / monthlyLeft);
-        const dailyBudget = Math.floor(monthlyLeft / 30);
-
-        monthsToGoalEl.textContent = "100万円まで：約 " + formatMonthsToJapanese(months);
-        dailyBudgetEl.textContent = "1日使える目安： " + yen(dailyBudget);
+        monthsToGoalEl.textContent = "100万円まで：約 " + formatMonthsToJapanese(currentMonths);
         summaryMessageEl.innerHTML = `<span class="good">このペースなら100万円まで進めます。</span>`;
       }
 
       const items = [
-        { key: "rent", value: rent },
-        { key: "food", value: food },
-        { key: "phone", value: phone },
-        { key: "utilities", value: utilities },
-        { key: "social", value: social },
-        { key: "insurance", value: insurance },
-        { key: "investment", value: investment },
-        { key: "other", value: other }
+        { key: "rent", value: rent, suggestedCut: 5000 },
+        { key: "food", value: food, suggestedCut: 5000 },
+        { key: "phone", value: phone, suggestedCut: 3000 },
+        { key: "utilities", value: utilities, suggestedCut: 2000 },
+        { key: "social", value: social, suggestedCut: 3000 },
+        { key: "insurance", value: insurance, suggestedCut: 3000 },
+        { key: "investment", value: investment, suggestedCut: 3000 },
+        { key: "other", value: other, suggestedCut: 3000 }
       ];
 
       let tableHtml = "";
       let suggestionHtml = "";
-      let highCount = 0;
+      let totalSuggestedCut = 0;
 
       items.forEach(item => {
         const rate = item.value / income;
         const standard = standards[item.key];
+        const daily = perDay(item.value);
 
         let status = "OK";
         let statusClass = "good";
@@ -473,7 +509,7 @@
             status = "高め";
             statusClass = "warn";
             comment = "投資額が大きめです。現金貯金とのバランス確認がおすすめです";
-            highCount++;
+            totalSuggestedCut += item.suggestedCut;
             suggestionHtml += getAffiliateBox("investment");
           }
         } else if (item.key === "insurance") {
@@ -486,7 +522,7 @@
             status = "高い";
             statusClass = "danger";
             comment = "平均より高めです。見直し余地があります";
-            highCount++;
+            totalSuggestedCut += item.suggestedCut;
             suggestionHtml += getAffiliateBox("insurance");
           }
         } else {
@@ -494,7 +530,7 @@
             status = "高い";
             statusClass = "danger";
             comment = "平均より高めです。見直し余地があります";
-            highCount++;
+            totalSuggestedCut += item.suggestedCut;
             suggestionHtml += getAffiliateBox(item.key);
           }
         }
@@ -503,6 +539,7 @@
           <tr>
             <td>${labels[item.key]}</td>
             <td>${yen(item.value)}</td>
+            <td>${yen(daily)}</td>
             <td>${percent(rate)}</td>
             <td><span class="${statusClass}">${status}</span></td>
             <td>${comment}</td>
@@ -512,13 +549,27 @@
 
       analysisTable.innerHTML = tableHtml;
 
+      if (totalSuggestedCut > 0 && monthlyLeft > 0) {
+        const improvedMonthlyLeft = monthlyLeft + totalSuggestedCut;
+        const improvedYearlyLeft = improvedMonthlyLeft * 12;
+        const improvedMonths = getMonthsToGoal(goal, improvedMonthlyLeft);
+        const shortenedMonths = currentMonths - improvedMonths;
+
+        improvementSummary.style.display = "block";
+        improvementSummary.innerHTML = `
+          <strong>改善するとどうなる？</strong><br>
+          月 <strong>${yen(totalSuggestedCut)}</strong> 改善できると、<br>
+          年間で <strong>${yen(totalSuggestedCut * 12)}</strong> 多く残せる可能性があります。<br>
+          100万円達成は <strong>${formatMonthsToJapanese(shortenedMonths)}</strong> 早まる見込みです。<br>
+          改善後の年間残額は <strong>${yen(improvedYearlyLeft)}</strong> です。
+        `;
+      } else {
+        improvementSummary.style.display = "none";
+        improvementSummary.innerHTML = "";
+      }
+
       if (!suggestionHtml) {
         suggestionHtml = `<p class="good">大きく高すぎる支出は見当たりません。今のペースを維持できれば良い感じです。</p>`;
-      } else {
-        const futureGain = highCount * 3000;
-        suggestionHtml =
-          `<p><strong>見直しポイントがあります。</strong><br>
-          高い項目を少し調整できるだけで、月 ${yen(futureGain)} 前後の改善になる可能性があります。</p>` + suggestionHtml;
       }
 
       suggestions.innerHTML = suggestionHtml;
