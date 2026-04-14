@@ -1,9 +1,10 @@
-<!DOCTYPE html>
+
+        <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>このままで大丈夫？100万円を貯金まで何年？</title>
+  <title>このままで大丈夫？100万円貯めるまでに何年？</title>
   <meta name="description" content="手取りと支出を入れるだけで、目標額までどれくらいかかるか、どこを見直せばいいかがわかる無料の家計診断ツールです。">
 
   <!-- AdSenseは審査通過後にここへ貼る -->
@@ -186,7 +187,7 @@
 <body>
   <div class="container">
     <div class="card hero">
-      <h1>このままで大丈夫？<br>100万円を貯金するまで何年？</h1>
+      <h1>このままで大丈夫？<br>100万円貯めるまでに何年？</h1>
       <p class="sub">
         手取りと毎月の支出を入れるだけで、<strong>目標額までどれくらいかかるか</strong>と、
         <strong>どこを見直せばラクになるか</strong>がわかります。
@@ -195,15 +196,21 @@
     </div>
 
     <div class="card">
-      <h2>年収から簡単入力</h2>
-      <p class="note">年収を選ぶと平均的な生活費が自動入力されます</p>
+      <h2>手取りから簡単入力</h2>
+      <p class="note">手取りを選ぶと平均的な生活費が自動入力されます</p>
+
       <div class="grid">
-        <button type="button" onclick="setIncomeData(300)">年収300万円</button>
-        <button type="button" onclick="setIncomeData(400)">年収400万円</button>
-        <button type="button" onclick="setIncomeData(500)">年収500万円</button>
-        <button type="button" onclick="setIncomeData(600)">年収600万円</button>
+        <button type="button" onclick="setIncomeData(300)">手取り月20万円</button>
+        <button type="button" onclick="setIncomeData(400)">手取り月26万円</button>
+        <button type="button" onclick="setIncomeData(500)">手取り月33万円</button>
+        <button type="button" onclick="setIncomeData(600)">手取り月39万円</button>
       </div>
-      <p class="note">※平均データです。あなたの生活に合わせて調整してください</p>
+
+      <p class="note">※手取り40万円以上は直接入力をして下さい。簡単入力は平均的な数値、あなたの生活に合わせて調整してください</p>
+
+      <div id="averageSavingBox" class="result-box">
+        <p>手取りを選ぶと、この年収帯の平均貯金がここに表示されます。</p>
+      </div>
     </div>
 
     <div class="card">
@@ -253,14 +260,18 @@
           <input id="other" type="number" placeholder="例：10000">
         </div>
 
-        <div style="grid-column: 1 / -1;">
+        <div>
           <label for="card">カード支払い</label>
           <input id="card" type="number" placeholder="例：20000">
+        </div>
+        <div>
+          <label for="bonus">ボーナス（年間貯金）</label>
+          <input id="bonus" type="number" placeholder="例：200000">
         </div>
       </div>
 
       <button type="button" onclick="calculate()">診断する</button>
-      <p class="note">※ 空欄は0円として計算します。目標額は自由に変更できます。</p>
+      <p class="note">※ 空欄は0円として計算します。目標額は自由に変更できます。ボーナスは年間で貯金に回す金額を入れてください。</p>
     </div>
 
     <div class="card">
@@ -269,6 +280,7 @@
         <p class="big" id="monthlyLeft">毎月の残り：-</p>
         <p id="yearlyLeft">年間で残せる金額：-</p>
         <p id="monthsToGoal">目標達成まで：-</p>
+        <p id="averageCompare">平均との比較：-</p>
         <p id="summaryMessage">-</p>
       </div>
     </div>
@@ -311,7 +323,7 @@
     <div class="card">
       <h2>このサイトについて</h2>
       <p>
-        このサイトは、貯金が苦手な人や目標を持って貯金する人が、まずお金の流れを把握して、
+        このサイトは、貯金が苦手な人や目標を持って貯金したい人がまずお金の流れを把握して、
         無理なく目標額を目指すための家計チェックツールです。
       </p>
       <div class="links">
@@ -324,7 +336,7 @@
   <script>
     const fields = [
       "income", "goal", "rent", "food", "phone", "utilities",
-      "social", "insurance", "investment", "other", "card"
+      "social", "insurance", "investment", "other", "card", "bonus"
     ];
 
     const standards = {
@@ -350,6 +362,15 @@
       other: "その他",
       card: "カード支払い"
     };
+
+    const averageSavingsByIncome = {
+      300: 10000,
+      400: 20000,
+      500: 30000,
+      600: 40000
+    };
+
+    let selectedIncomeLevel = null;
 
     function yen(num) {
       return Number(num).toLocaleString() + "円";
@@ -377,6 +398,7 @@
       fields.forEach(id => {
         localStorage.setItem(id, document.getElementById(id).value || "");
       });
+      localStorage.setItem("selectedIncomeLevel", selectedIncomeLevel || "");
     }
 
     function loadInputs() {
@@ -386,6 +408,12 @@
           document.getElementById(id).value = saved;
         }
       });
+
+      const savedIncomeLevel = localStorage.getItem("selectedIncomeLevel");
+      if (savedIncomeLevel) {
+        selectedIncomeLevel = Number(savedIncomeLevel);
+        updateAverageSavingBox(selectedIncomeLevel);
+      }
     }
 
     function getVal(id) {
@@ -393,9 +421,19 @@
       return val === "" ? 0 : Number(val);
     }
 
-    function getMonthsToGoal(goal, monthlyLeft) {
-      if (monthlyLeft <= 0) return null;
-      return Math.ceil(goal / monthlyLeft);
+    function updateAverageSavingBox(level) {
+      const box = document.getElementById("averageSavingBox");
+      const avg = averageSavingsByIncome[level];
+
+      if (!avg) {
+        box.innerHTML = `<p>年収を選ぶと、この年収帯の平均貯金がここに表示されます。</p>`;
+        return;
+      }
+
+      box.innerHTML = `
+        <p><strong>この年収帯の平均貯金：</strong>月 ${yen(avg)}</p>
+        <p class="small">ざっくりした目安です。生活スタイルによって前後します。</p>
+      `;
     }
 
     function getAffiliateBox(type) {
@@ -496,6 +534,8 @@
     }
 
     function setIncomeData(level) {
+      selectedIncomeLevel = level;
+
       if (level === 300) {
         setValues(200000, 60000, 25000, 8000, 10000, 10000, 8000, 5000, 15000, 15000);
       } else if (level === 400) {
@@ -506,12 +546,14 @@
         setValues(390000, 100000, 40000, 10000, 15000, 25000, 15000, 20000, 30000, 40000);
       }
 
+      updateAverageSavingBox(level);
       calculate();
     }
 
     function calculate() {
       const income = getVal("income");
       const goal = getVal("goal") || 1000000;
+
       const rent = getVal("rent");
       const food = getVal("food");
       const phone = getVal("phone");
@@ -521,6 +563,7 @@
       const investment = getVal("investment");
       const other = getVal("other");
       const card = getVal("card");
+      const bonus = getVal("bonus");
 
       saveInputs();
 
@@ -531,11 +574,12 @@
 
       const totalExpenses = rent + food + phone + utilities + social + insurance + investment + other + card;
       const monthlyLeft = income - totalExpenses;
-      const yearlyLeft = monthlyLeft * 12;
+      const yearlySaving = monthlyLeft * 12 + bonus;
 
       const monthlyLeftEl = document.getElementById("monthlyLeft");
       const yearlyLeftEl = document.getElementById("yearlyLeft");
       const monthsToGoalEl = document.getElementById("monthsToGoal");
+      const averageCompareEl = document.getElementById("averageCompare");
       const summaryMessageEl = document.getElementById("summaryMessage");
       const analysisTable = document.getElementById("analysisTable");
       const suggestions = document.getElementById("suggestions");
@@ -543,16 +587,30 @@
       const foodDailyBox = document.getElementById("foodDailyBox");
 
       monthlyLeftEl.textContent = "毎月の残り： " + yen(monthlyLeft);
-      yearlyLeftEl.textContent = "年間で残せる金額： " + yen(yearlyLeft);
+      yearlyLeftEl.textContent = "年間で残せる金額： " + yen(yearlySaving);
 
-      const currentMonths = getMonthsToGoal(goal, monthlyLeft);
-
-      if (monthlyLeft <= 0) {
+      if (monthlyLeft <= 0 || yearlySaving <= 0) {
         monthsToGoalEl.textContent = "目標達成まで：このままだと貯金できません";
         summaryMessageEl.innerHTML = `<span class="danger">支出が手取りを超えているか、ほぼ同じです。まずは固定費の見直しが優先です。</span>`;
       } else {
-        monthsToGoalEl.textContent = "目標達成まで：約 " + formatMonthsToJapanese(currentMonths);
+        const months = Math.ceil((goal / yearlySaving) * 12);
+        monthsToGoalEl.textContent = "目標達成まで：約 " + formatMonthsToJapanese(months);
         summaryMessageEl.innerHTML = `<span class="good">このペースでも達成できますが、少し見直すともっと早くなります</span>`;
+      }
+
+      if (selectedIncomeLevel && averageSavingsByIncome[selectedIncomeLevel]) {
+        const avg = averageSavingsByIncome[selectedIncomeLevel];
+        const diff = monthlyLeft - avg;
+
+        if (diff > 0) {
+          averageCompareEl.innerHTML = `平均との比較：<span class="good">平均より ${yen(diff)} 多く貯められそうです</span>`;
+        } else if (diff < 0) {
+          averageCompareEl.innerHTML = `平均との比較：<span class="warn">平均より ${yen(Math.abs(diff))} 少なめです</span>`;
+        } else {
+          averageCompareEl.innerHTML = `平均との比較：<span class="good">この年収帯の平均と同じくらいです</span>`;
+        }
+      } else {
+        averageCompareEl.textContent = "平均との比較：年収を選ぶと表示されます";
       }
 
       if (food > 0) {
@@ -639,17 +697,19 @@
 
       if (totalSuggestedCut > 0 && monthlyLeft > 0) {
         const improvedMonthlyLeft = monthlyLeft + totalSuggestedCut;
-        const improvedYearlyLeft = improvedMonthlyLeft * 12;
-        const improvedMonths = getMonthsToGoal(goal, improvedMonthlyLeft);
-        const shortenedMonths = currentMonths - improvedMonths;
+        const improvedYearlySaving = improvedMonthlyLeft * 12 + bonus;
+
+        const currentMonthsWithBonus = Math.ceil((goal / yearlySaving) * 12);
+        const improvedMonthsWithBonus = Math.ceil((goal / improvedYearlySaving) * 12);
+        const shortenedMonths = currentMonthsWithBonus - improvedMonthsWithBonus;
 
         improvementSummary.style.display = "block";
         improvementSummary.innerHTML = `
-          <strong>少し見直せるとどうなる？</strong><br>
-          月 <strong>${yen(totalSuggestedCut)}</strong> くらい改善できると、<br>
-          年間で <strong>${yen(totalSuggestedCut * 12)}</strong> 多く残せる可能性があります。<br>
+          <strong>月々の支払いを見直すと、どれくらい変わる？</strong><br>
+          毎月 <strong>${yen(totalSuggestedCut)}</strong> くらい改善できると、<br>
+          年間で <strong>${yen(totalSuggestedCut * 12)}</strong> 多く貯められる可能性があります。<br>
           目標達成は <strong>${formatMonthsToJapanese(shortenedMonths)}</strong> 早まる見込みです。<br>
-          改善後の年間残額は <strong>${yen(improvedYearlyLeft)}</strong> です。
+          改善後の年間貯金ペースは <strong>${yen(improvedYearlySaving)}</strong> です。
         `;
       } else {
         improvementSummary.style.display = "none";
