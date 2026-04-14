@@ -1,10 +1,10 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>100万円貯金シミュレーター</title>
-  <meta name="description" content="手取りと支出を入力すると、100万円まで何ヶ月かかるか、支出のバランスが平均より高いかを確認できる無料ツールです。">
+  <meta name="description" content="手取りと支出を入力すると、100万円まで何年何ヶ月かかるか、支出のバランスが平均より高いかを確認できる無料ツールです。">
 
   <!-- AdSenseは審査通過後にここへ貼る -->
 
@@ -163,55 +163,55 @@
   <div class="container">
     <h1>100万円貯金シミュレーター</h1>
     <p class="sub">
-      手取りと毎月の支出を入れると、100万円まで何ヶ月かかるかと、支出バランスの改善ポイントがわかります。
+      手取りと毎月の支出を入れると、100万円まで何年何ヶ月かかるかと、支出バランスの改善ポイントがわかります。
     </p>
 
     <div class="card">
       <div class="grid">
         <div>
           <label for="income">手取り（月）</label>
-          <input id="income" type="number" placeholder="250000">
+          <input id="income" type="number" placeholder="例：250000">
         </div>
         <div>
           <label for="rent">家賃</label>
-          <input id="rent" type="number" placeholder="70000">
+          <input id="rent" type="number" placeholder="例：70000">
         </div>
 
         <div>
           <label for="food">食費</label>
-          <input id="food" type="number" placeholder="30000">
+          <input id="food" type="number" placeholder="例：30000">
         </div>
         <div>
           <label for="phone">通信費</label>
-          <input id="phone" type="number" placeholder="8000">
+          <input id="phone" type="number" placeholder="例：8000">
         </div>
 
         <div>
           <label for="utilities">光熱費</label>
-          <input id="utilities" type="number" placeholder="12000">
+          <input id="utilities" type="number" placeholder="例：12000">
         </div>
         <div>
           <label for="social">交際費</label>
-          <input id="social" type="number" placeholder="15000">
+          <input id="social" type="number" placeholder="例：15000">
         </div>
 
         <div>
           <label for="insurance">保険</label>
-          <input id="insurance" type="number" placeholder="10000">
+          <input id="insurance" type="number" placeholder="例：10000">
         </div>
         <div>
           <label for="investment">投資</label>
-          <input id="investment" type="number" placeholder="10000">
+          <input id="investment" type="number" placeholder="例：10000">
         </div>
 
         <div style="grid-column: 1 / -1;">
           <label for="other">その他</label>
-          <input id="other" type="number" placeholder="10000">
+          <input id="other" type="number" placeholder="例：10000">
         </div>
       </div>
 
       <button onclick="calculate()">診断する</button>
-      <p class="note">※ 投資も毎月の手取りから出ていく金額として計算しています。</p>
+      <p class="note">※ 空欄は0円として計算します。投資も毎月の手取りから出ていく金額として計算しています。</p>
     </div>
 
     <div class="card">
@@ -300,6 +300,19 @@
       return (num * 100).toFixed(1) + "%";
     }
 
+    function formatMonthsToJapanese(months) {
+      const years = Math.floor(months / 12);
+      const remainMonths = months % 12;
+
+      if (years === 0) {
+        return remainMonths + "ヶ月";
+      }
+      if (remainMonths === 0) {
+        return years + "年";
+      }
+      return years + "年" + remainMonths + "ヶ月";
+    }
+
     function saveInputs() {
       fields.forEach(id => {
         localStorage.setItem(id, document.getElementById(id).value || "");
@@ -316,7 +329,8 @@
     }
 
     function getVal(id) {
-      return Number(document.getElementById(id).value) || 0;
+      const val = document.getElementById(id).value;
+      return val === "" ? 0 : Number(val);
     }
 
     function getAffiliateBox(type) {
@@ -333,8 +347,8 @@
       if (type === "insurance") {
         return `
           <div class="ad-box">
-            <strong>保険が高めです</strong><br>
-            保険は見直すだけで固定費が下がることがあります。<br>
+            <strong>保険の見直し余地があります</strong><br>
+            必要以上に高い保険に入っていると、固定費を圧迫しやすいです。<br>
             <a href="#">👉 保険の見直しサービスを見る</a>
           </div>
         `;
@@ -346,6 +360,26 @@
             <strong>投資額が大きめです</strong><br>
             まずは100万円の現金貯金を優先したいなら、積立額の調整もアリです。<br>
             <a href="#">👉 投資口座の比較を見る</a>
+          </div>
+        `;
+      }
+
+      if (type === "investment_zero") {
+        return `
+          <div class="ad-box">
+            <strong>投資が0円です</strong><br>
+            まずは貯金優先でOKですが、余裕が出てきたら少額つみたてを考えるのもアリです。<br>
+            <a href="#">👉 つみたて投資をチェック</a>
+          </div>
+        `;
+      }
+
+      if (type === "insurance_zero") {
+        return `
+          <div class="ad-box">
+            <strong>保険が0円です</strong><br>
+            独身か家族持ちかで必要な保険は変わります。必要最低限だけ確認しておくのもアリです。<br>
+            <a href="#">👉 保険の基本をチェック</a>
           </div>
         `;
       }
@@ -401,7 +435,7 @@
         const months = Math.ceil(1000000 / monthlyLeft);
         const dailyBudget = Math.floor(monthlyLeft / 30);
 
-        monthsToGoalEl.textContent = "100万円まで：約 " + months + "ヶ月";
+        monthsToGoalEl.textContent = "100万円まで：約 " + formatMonthsToJapanese(months);
         dailyBudgetEl.textContent = "1日使える目安： " + yen(dailyBudget);
         summaryMessageEl.innerHTML = `<span class="good">このペースなら100万円まで進めます。</span>`;
       }
@@ -430,16 +464,30 @@
         let comment = "バランスは大きく崩れていません";
 
         if (item.key === "investment") {
-          if (rate > standard) {
+          if (item.value === 0) {
+            status = "未設定";
+            statusClass = "warn";
+            comment = "余裕が出てきたら少額つみたてを考える余地があります";
+            suggestionHtml += getAffiliateBox("investment_zero");
+          } else if (rate > standard) {
             status = "高め";
             statusClass = "warn";
             comment = "投資額が大きめです。現金貯金とのバランス確認がおすすめです";
             highCount++;
-            suggestionHtml += getAffiliateBox(item.key);
-          } else if (item.value === 0) {
-            status = "少なめ";
+            suggestionHtml += getAffiliateBox("investment");
+          }
+        } else if (item.key === "insurance") {
+          if (item.value === 0) {
+            status = "未設定";
             statusClass = "warn";
-            comment = "投資はゼロでもOKですが、貯金が安定したら検討余地ありです";
+            comment = "保険が不要な人もいますが、必要最低限の確認はしてもよいです";
+            suggestionHtml += getAffiliateBox("insurance_zero");
+          } else if (rate > standard) {
+            status = "高い";
+            statusClass = "danger";
+            comment = "平均より高めです。見直し余地があります";
+            highCount++;
+            suggestionHtml += getAffiliateBox("insurance");
           }
         } else {
           if (rate > standard) {
