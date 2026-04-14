@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>100万円貯金シミュレーター</title>
+
+<!-- ↓ここにAdSenseコード貼る -->
+<!-- 広告は審査通ってから -->
+
+<style>
+body{
+  font-family:sans-serif;
+  background:#f5f5f5;
+  padding:20px;
+}
+.box{
+  background:white;
+  padding:20px;
+  margin-bottom:15px;
+  border-radius:10px;
+}
+input,button{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+}
+button{
+  background:#007bff;
+  color:white;
+  border:none;
+}
+h1{font-size:22px;}
+</style>
+</head>
+
+<body>
+
+<h1>100万円貯金シミュレーター</h1>
+
+<div class="box">
+月収（手取り）
+<input id="income" type="number" placeholder="200000">
+
+支出
+<input id="expense" type="number" placeholder="150000">
+
+<button onclick="calc()">計算する</button>
+</div>
+
+<div class="box">
+<h2>結果</h2>
+<p id="save"></p>
+<p id="months"></p>
+<p id="daily"></p>
+</div>
+
+<div class="box">
+<h2>おすすめ節約</h2>
+
+<p>通信費を見直すと月5000円以上浮くことも</p>
+<a href="#">👉 格安SIMを見る</a>
+
+<br><br>
+
+<p>余ったお金は投資で増やす</p>
+<a href="#">👉 証券口座を見る</a>
+
+</div>
+
+<script>
+function calc(){
+  let income = Number(document.getElementById("income").value);
+  let expense = Number(document.getElementById("expense").value);
+
+  let save = income - expense;
+
+  localStorage.setItem("income", income);
+  localStorage.setItem("expense", expense);
+
+  if(save <= 0){
+    document.getElementById("save").innerText = "貯金できません";
+    return;
+  }
+
+  let months = Math.ceil(1000000 / save);
+  let daily = Math.floor(save / 30);
+
+  document.getElementById("save").innerText =
+    "毎月の貯金額：" + save.toLocaleString() + "円";
+
+  document.getElementById("months").innerText =
+    "100万円まで：約" + months + "ヶ月";
+
+  document.getElementById("daily").innerText =
+    "1日使える目安：" + daily.toLocaleString() + "円";
+}
+
+// 保存データ読み込み
+window.onload = function(){
+  let income = localStorage.getItem("income");
+  let expense = localStorage.getItem("expense");
+
+  if(income) document.getElementById("income").value = income;
+  if(expense) document.getElementById("expense").value = expense;
+}
+</script>
+
+</body>
+</html>
